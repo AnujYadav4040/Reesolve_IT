@@ -18,6 +18,15 @@ const ticketSchema = new mongoose.Schema(
       type: String,
       enum: ['low', 'medium', 'high', 'critical'],
     },
+    sentiment: {
+      type: String,
+      enum: ['positive', 'neutral', 'negative'],
+      default: 'neutral'
+    },
+    sentimentScore: {
+      type: Number,
+      default: 0
+    },
     status: {
       type: String,
       enum: ['open', 'in-progress', 'resolved', 'closed', 'on-hold'],
@@ -29,8 +38,13 @@ const ticketSchema = new mongoose.Schema(
     resolvedDate: { type: Date },
     closedDate: { type: Date },
     resolutionNote: { type: String },
+    estimatedResolutionTime: { type: String },
+    isDuplicate: { type: Boolean, default: false },
+    parentTicket: { type: mongoose.Schema.Types.ObjectId, ref: 'Ticket' }
   },
   { timestamps: true }
 );
+
+ticketSchema.index({ title: 'text', description: 'text' });
 
 module.exports = mongoose.model('Ticket', ticketSchema);

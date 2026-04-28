@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5001/api',
 });
 
 // Auto-attach token from localStorage
@@ -22,9 +22,11 @@ export const getMe = () => API.get('/auth/me');
 export const createTicket = (data) => API.post('/tickets', data);
 export const getTickets = (params) => API.get('/tickets', { params });
 export const getTicketById = (id) => API.get(`/tickets/${id}`);
+export const getSuggestions = (query) => API.get('/tickets/suggestions', { params: { query } });
 export const updateTicketStatus = (id, data) => API.put(`/tickets/${id}/status`, data);
 export const assignTicket = (id, data) => API.put(`/tickets/${id}/assign`, data);
 export const updateTicketPriority = (id, data) => API.put(`/tickets/${id}/priority`, data);
+export const predictPriority = (data) => API.post('/tickets/predict-priority', data);
 
 // Admin
 export const getAdminDashboard = () => API.get('/admin/dashboard');
@@ -53,5 +55,8 @@ export const getTicketsByPriority = () => API.get('/analytics/tickets-by-priorit
 export const getTicketsTrend = () => API.get('/analytics/tickets-trend');
 export const getTechnicianPerformance = () => API.get('/analytics/technician-performance');
 export const getAvgRating = () => API.get('/analytics/avg-rating');
+
+// Chatbot
+export const sendChatMessage = (data) => API.post('/chatbot', data);
 
 export default API;

@@ -11,30 +11,144 @@ const logActivity = async (ticketId, userId, action) => {
   await ActivityLog.create({ ticket: ticketId, performedBy: userId, actionPerformed: action });
 };
 
+// @route   POST /api/tickets/predict-priority
+// @desc    Predict ticket priority using Machine Learning (natural NLP)
+// @access  Private (user, admin)
+router.post('/predict-priority', protect, (req, res) => {
+  const { description } = req.body;
+  const aiPredictedPriority = predictPriority('mock', description); // We will update aiPriorityController to use mlService
+  res.json({ priority: aiPredictedPriority });
+});
+
+const MLService = require('../services/mlService');
+
+// @route   GET /api/tickets/suggestions
+// @desc    Get ticket resolution suggestions based on text search
+// @access  Private
+router.get('/suggestions', protect, async (req, res) => {
+  try {
+    const { query } = req.query;
+    if (!query || query.length < 3) {
+      return res.json([]);
+    }
+
+    const suggestions = await Ticket.find(
+      { 
+        $text: { $search: query }, 
+        status: { $in: ['resolved', 'closed'] },
+        resolutionNote: { $exists: true, $ne: '' }
+      },
+      { score: { $meta: "textScore" } }
+    )
+    .sort({ score: { $meta: "textScore" } })
+    .limit(3)
+    .select('title resolutionNote category');
+
+    res.json(suggestions);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // @route   POST /api/tickets
 // @desc    Create a new ticket (User)
 // @access  Private (user)
 router.post('/', protect, authorize('user', 'admin'), async (req, res) => {
   try {
-    const { title, description, category } = req.body;
+    const { title, description } = req.body; // Category is now auto-determined
 
-    // AI Priority Prediction
-    const aiPredictedPriority = predictPriority(title, description);
+    // Advanced AI Machine Learning 
+    const textContext = `${title} ${description}`;
+    let aiPredictedPriority = MLService.predictPriority(textContext).toLowerCase();
+    const aiPredictedCategory = MLService.predictCategory(textContext).toLowerCase();
+    
+    // Sentiment Analysis
+    const sentimentResult = MLService.analyzeSentiment(textContext);
+    
+    // Auto-escalate if user is highly frustrated/negative
+    if (sentimentResult.sentiment === 'negative' && (aiPredictedPriority === 'low' || aiPredictedPriority === 'medium')) {
+      aiPredictedPriority = 'high';
+    }
+
+    // Time Predictor
+    const estimatedResolutionTime = MLService.predictResolutionTime(aiPredictedPriority, aiPredictedCategory);
+
+    // Auto-Assignment Logic: Find an available tech with matching skills, least loaded first
+    let assignedTechnicianId = null;
+    let initialStatus = 'open';
+
+    const techs = await Technician.find({ availabilityStatus: 'available' });
+    if (techs.length > 0) {
+      // Find techs with matching skill (or 'other' / fallback)
+      const matchingTechs = techs.filter(t => t.skillSet && t.skillSet.map(s => s.toLowerCase()).includes(aiPredictedCategory));
+      
+      let bestTech = null;
+      if (matchingTechs.length > 0) {
+        // Find the one with fewest assigned tickets
+        bestTech = matchingTechs.reduce((prev, curr) => (prev.assignedTickets.length < curr.assignedTickets.length ? prev : curr));
+      } else {
+        // Fallback: strictly assign to ANY available tech if load balancing is extreme (or choose not to)
+        // Let's just assign to the least loaded available tech if no skill match
+        bestTech = techs.reduce((prev, curr) => (prev.assignedTickets.length < curr.assignedTickets.length ? prev : curr));
+      }
+
+      if (bestTech) {
+        assignedTechnicianId = bestTech._id;
+        initialStatus = 'in-progress';
+      }
+    }
+
+    // Duplicate Detection Logic
+    // Fetch tickets created in the last 2 hours
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    const recentTickets = await Ticket.find({
+      createdAt: { $gte: twoHoursAgo },
+      category: aiPredictedCategory,
+      status: { $in: ['open', 'in-progress'] }
+    });
+
+    const duplicateParentId = MLService.findDuplicate(title, recentTickets);
+    let isDuplicate = false;
+    let parentTicket = null;
+
+    if (duplicateParentId) {
+      isDuplicate = true;
+      parentTicket = duplicateParentId;
+      // If it's a duplicate, we don't necessarily need to assign it to a tech right away, 
+      // but we will keep the auto-assignment for simplicity.
+    }
 
     const ticket = await Ticket.create({
       title,
       description,
-      category,
+      category: aiPredictedCategory,
       priority: aiPredictedPriority,
       aiPredictedPriority,
+      sentiment: sentimentResult.sentiment,
+      sentimentScore: sentimentResult.score,
+      estimatedResolutionTime,
+      isDuplicate,
+      parentTicket,
+      status: initialStatus,
+      technician: assignedTechnicianId,
       user: req.user._id,
     });
 
+    if (assignedTechnicianId) {
+      // Update chosen technician
+      await Technician.findByIdAndUpdate(assignedTechnicianId, { $push: { assignedTickets: ticket._id } });
+      await logActivity(ticket._id, req.user._id, `AI Auto-Assigned ticket to Technician`);
+    }
+
     await logActivity(ticket._id, req.user._id, 'Ticket created');
 
-    // Real-time notification to admin room
+    // Real-time notifications
     const io = req.app.get('io');
     io.emit('new_ticket', { ticket, message: `New ticket: ${title}` });
+    
+    if (assignedTechnicianId) {
+      io.emit('ticket_assigned', { ticketId: ticket._id, technicianId: assignedTechnicianId });
+    }
 
     res.status(201).json(ticket);
   } catch (error) {

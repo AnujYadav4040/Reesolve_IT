@@ -5,6 +5,10 @@ import './index.css';
 // Pages
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import AboutPage from './pages/AboutPage';
+import FeaturesPage from './pages/FeaturesPage';
+import PricingPage from './pages/PricingPage';
+import ContactPage from './pages/ContactPage';
 import UserDashboard from './pages/UserDashboard';
 import CreateTicket from './pages/CreateTicket';
 import TicketDetail from './pages/TicketDetail';
@@ -15,6 +19,7 @@ import AdminTickets from './pages/AdminTickets';
 import AdminAnalytics from './pages/AdminAnalytics';
 import AdminTechnicians from './pages/AdminTechnicians';
 import AdminUsers from './pages/AdminUsers';
+import LandingPage from './pages/LandingPage';
 
 const ProtectedRoute = ({ children, roles }) => {
   const { user, loading } = useAuth();
@@ -26,22 +31,32 @@ const ProtectedRoute = ({ children, roles }) => {
 
 const HomeRedirect = () => {
   const { user } = useAuth();
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <LandingPage />;
   if (user.role === 'admin') return <Navigate to="/admin/dashboard" replace />;
   if (user.role === 'technician') return <Navigate to="/technician/dashboard" replace />;
   return <Navigate to="/dashboard" replace />;
 };
 
+import Navbar from './components/Navbar';
+import AIChatbot from './components/AIChatbot';
+import { ToastProvider } from './context/ToastContext';
+
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<HomeRedirect />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
+      <ToastProvider>
+        <BrowserRouter>
+          <Navbar />
+          <Routes>
+            <Route path="/" element={<HomeRedirect />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/features" element={<FeaturesPage />} />
+            <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
 
-          {/* User Routes */}
+            {/* User Routes */}
           <Route path="/dashboard" element={
             <ProtectedRoute roles={['user']}>
               <UserDashboard />
@@ -97,7 +112,9 @@ function App() {
             </ProtectedRoute>
           } />
         </Routes>
-      </BrowserRouter>
+          <AIChatbot />
+        </BrowserRouter>
+      </ToastProvider>
     </AuthProvider>
   );
 }

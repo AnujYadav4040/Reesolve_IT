@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { getTickets, updateTicketStatus, updateAvailability } from '../api';
 import { useAuth } from '../context/AuthContext';
+import { io } from 'socket.io-client';
+import { useToast } from '../context/ToastContext';
 
 export default function TechnicianDashboard() {
   const { user } = useAuth();
@@ -11,12 +13,28 @@ export default function TechnicianDashboard() {
   const [availability, setAvailability] = useState('available');
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
+  const { addToast } = useToast();
 
-  useEffect(() => {
+  const fetchData = () => {
     getTickets({ limit: 50 })
       .then((r) => setData(r.data))
       .catch(console.error)
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchData();
+
+    const socket = io(process.env.REACT_APP_SOCKET_URL || 'http://localhost:5001');
+
+    socket.on('ticket_assigned', () => {
+      fetchData();
+      addToast('Ticket dispatch event detected. Refreshing list.', 'info');
+    });
+
+    socket.on('ticket_updated', () => fetchData());
+
+    return () => socket.disconnect();
   }, []);
 
   const handleStatusUpdate = async (ticketId, status, resolutionNote = '') => {
@@ -88,73 +106,108 @@ export default function TechnicianDashboard() {
           </div>
         </div>
 
-        <div className="card">
-          <h3 style={{ marginBottom: 16 }}>Assigned Tickets</h3>
-          {loading ? <div className="spinner" /> : (
-            data.tickets.length === 0 ? (
-              <p className="text-muted" style={{ textAlign: 'center', padding: '40px 0' }}>No tickets assigned yet.</p>
-            ) : (
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Title</th>
-                      <th>User</th>
-                      <th>Priority</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.tickets.map((t) => (
-                      <tr key={t._id}>
-                        <td className="text-muted text-sm">#{t._id.slice(-6).toUpperCase()}</td>
-                        <td style={{ fontWeight: 500, cursor: 'pointer' }} onClick={() => navigate(`/tickets/${t._id}`)}>{t.title}</td>
-                        <td className="text-muted">{t.user?.name}</td>
-                        <td><span className={`badge badge-${t.priority}`}>{t.priority}</span></td>
-                        <td><span className={`badge badge-${t.status}`}>{t.status}</span></td>
-                        <td>
-                          <div className="flex gap-2">
-                            {t.status !== 'resolved' && t.status !== 'closed' && (
-                              <button
-                                className="btn btn-success btn-sm"
-                                disabled={updatingId === t._id}
-                                onClick={() => {
-                                  const note = prompt('Enter resolution note (optional):') || '';
-                                  handleStatusUpdate(t._id, 'resolved', note);
-                                }}
-                              >
-                                Resolve
-                              </button>
-                            )}
-                            {t.status === 'in-progress' && (
-                              <button
-                                className="btn btn-outline btn-sm"
-                                disabled={updatingId === t._id}
-                                onClick={() => handleStatusUpdate(t._id, 'on-hold')}
-                              >
-                                Hold
-                              </button>
-                            )}
-                            {t.status === 'on-hold' && (
-                              <button
-                                className="btn btn-primary btn-sm"
-                                disabled={updatingId === t._id}
-                                onClick={() => handleStatusUpdate(t._id, 'in-progress')}
-                              >
-                                Resume
-                              </button>
-                            )}
-                          </div>
-                        </td>
+        <div className="grid-2">
+          <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
+            <h3 style={{ marginBottom: 16 }}>Assigned Tickets</h3>
+            {loading ? <div className="spinner" /> : (
+              data.tickets.length === 0 ? (
+                <p className="text-muted" style={{ textAlign: 'center', padding: '40px 0' }}>No tickets assigned yet.</p>
+              ) : (
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>User</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                        <th>Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {data.tickets.map((t) => (
+                        <tr key={t._id}>
+                          <td className="text-muted text-sm">#{t._id.slice(-6).toUpperCase()}</td>
+                          <td style={{ fontWeight: 500, cursor: 'pointer' }} onClick={() => navigate(`/tickets/${t._id}`)}>
+                            {t.sentiment === 'negative' && <span title="Highly Frustrated User" style={{marginRight: '5px'}}>😡</span>}
+                            {t.title}
+                          </td>
+                          <td className="text-muted">{t.user?.name}</td>
+                          <td><span className={`badge badge-${t.priority}`}>{t.priority}</span></td>
+                          <td><span className={`badge badge-${t.status}`}>{t.status}</span></td>
+                          <td>
+                            <div className="flex gap-2">
+                              {t.status !== 'resolved' && t.status !== 'closed' && (
+                                <button
+                                  className="btn btn-success btn-sm"
+                                  disabled={updatingId === t._id}
+                                  onClick={() => {
+                                    const note = prompt('Enter resolution note (optional):') || '';
+                                    handleStatusUpdate(t._id, 'resolved', note);
+                                  }}
+                                >
+                                  Resolve
+                                </button>
+                              )}
+                              {t.status === 'in-progress' && (
+                                <button
+                                  className="btn btn-outline btn-sm"
+                                  disabled={updatingId === t._id}
+                                  onClick={() => handleStatusUpdate(t._id, 'on-hold')}
+                                >
+                                  Hold
+                                </button>
+                              )}
+                              {t.status === 'on-hold' && (
+                                <button
+                                  className="btn btn-primary btn-sm"
+                                  disabled={updatingId === t._id}
+                                  onClick={() => handleStatusUpdate(t._id, 'in-progress')}
+                                >
+                                  Resume
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
+            )}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div className="card">
+              <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>⚡ Quick Actions</h3>
+              <div className="grid-2" style={{ gap: '10px' }}>
+                <button className="btn btn-outline" onClick={() => navigate('/features')} style={{ width: '100%', justifyContent: 'center' }}>Knowledge Base</button>
+                <button className="btn btn-outline" onClick={() => alert('Assistance requested!')} style={{ width: '100%', justifyContent: 'center' }}>Request Backup</button>
               </div>
-            )
-          )}
+            </div>
+
+            <div className="card" style={{ flex: 1 }}>
+              <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>🏆 Performance Snapshot</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'var(--surface-hover)', borderRadius: '8px' }}>
+                  <div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>Resolution Time</div>
+                    <div className="text-muted" style={{ fontSize: '0.8rem', marginTop: '4px' }}>Avg time to resolve</div>
+                  </div>
+                  <div style={{ fontWeight: 600, color: 'var(--success)' }}>1.2 hrs</div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'var(--surface-hover)', borderRadius: '8px' }}>
+                  <div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>Customer Rating</div>
+                    <div className="text-muted" style={{ fontSize: '0.8rem', marginTop: '4px' }}>Based on recent feedback</div>
+                  </div>
+                  <div style={{ fontWeight: 600, color: 'var(--warning)' }}>4.8 / 5.0</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </main>
     </div>

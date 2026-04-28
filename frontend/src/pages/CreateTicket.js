@@ -1,47 +1,57 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
-import { createTicket } from '../api';
-
-// Client-side AI priority preview (mirrors backend logic)
-const CRITICAL_KW = ['server down', 'system crash', 'data loss', 'breach', 'hacked', 'ransomware', 'production down', 'emergency', 'database corrupted'];
-const HIGH_KW = ['not working', 'broken', 'error', 'failed', 'urgent', 'cannot access', 'network down', 'software crash'];
-const MEDIUM_KW = ['slow', 'issue', 'problem', 'delay', 'configure', 'setup'];
-const LOW_KW = ['question', 'inquiry', 'how to', 'information', 'update', 'minor'];
-
-const previewPriority = (title, desc) => {
-  const text = `${title} ${desc}`.toLowerCase();
-  let scores = { critical: 0, high: 0, medium: 0, low: 0 };
-  CRITICAL_KW.forEach((k) => { if (text.includes(k)) scores.critical += 3; });
-  HIGH_KW.forEach((k) => { if (text.includes(k)) scores.high += 2; });
-  MEDIUM_KW.forEach((k) => { if (text.includes(k)) scores.medium += 1; });
-  LOW_KW.forEach((k) => { if (text.includes(k)) scores.low += 1; });
-  const max = Math.max(...Object.values(scores));
-  if (max === 0) return 'medium';
-  return Object.entries(scores).find(([, v]) => v === max)[0];
-};
+import { useToast } from '../context/ToastContext';
+import { createTicket, predictPriority, getSuggestions } from '../api';
 
 export default function CreateTicket() {
   const [form, setForm] = useState({ title: '', description: '', category: 'hardware' });
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [aiPriority, setAiPriority] = useState(null);
+  const [suggestions, setSuggestions] = useState([]);
+  const { addToast } = useToast();
   const navigate = useNavigate();
 
-  const aiPriority = previewPriority(form.title, form.description);
+  const handleBlur = async () => {
+    if (form.description.length > 10) {
+      try {
+        const { data } = await predictPriority({ description: form.description });
+        setAiPriority(data.priority);
+      } catch (err) {
+        console.error('Failed to fetch AI priority prediction', err);
+      }
+    }
+  };
+
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (form.title.length > 3) {
+        try {
+          const { data } = await getSuggestions(form.title);
+          setSuggestions(data);
+        } catch (err) {
+          console.error('Failed to fetch suggestions', err);
+        }
+      } else {
+        setSuggestions([]);
+      }
+    };
+
+    const debounceTimeout = setTimeout(fetchSuggestions, 500);
+    return () => clearTimeout(debounceTimeout);
+  }, [form.title]);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
     try {
       const { data } = await createTicket(form);
-      setSuccess(`Ticket #${data._id.slice(-6).toUpperCase()} created! AI assigned priority: ${data.aiPredictedPriority}`);
+      addToast(`Ticket created! Priority: ${data.aiPredictedPriority} | Est. Fix: ${data.estimatedResolutionTime}`, 'success');
       setTimeout(() => navigate('/tickets'), 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create ticket.');
+      addToast(err.response?.data?.message || 'Failed to create ticket.', 'error');
     } finally {
       setLoading(false);
     }
@@ -59,9 +69,6 @@ export default function CreateTicket() {
         </div>
 
         <div style={{ maxWidth: 680 }}>
-          {error && <div className="alert alert-error">{error}</div>}
-          {success && <div className="alert alert-success">{success}</div>}
-
           <div className="card">
             <form onSubmit={handleSubmit}>
               <div className="form-group">
@@ -74,6 +81,23 @@ export default function CreateTicket() {
                   required
                 />
               </div>
+
+              {/* Smart FAQ / Suggestions */}
+              {suggestions.length > 0 && (
+                <div className="alert alert-warning" style={{ marginBottom: 16 }}>
+                  <div style={{ fontWeight: 600, marginBottom: 8 }}>💡 Quick Solutions (Based on similar resolved tickets)</div>
+                  <ul style={{ paddingLeft: 16, margin: 0, fontSize: '0.9rem' }}>
+                    {suggestions.map((s) => (
+                      <li key={s._id} style={{ marginBottom: 8 }}>
+                        <strong>{s.title}:</strong> {s.resolutionNote}
+                      </li>
+                    ))}
+                  </ul>
+                  <div style={{ marginTop: 8, fontSize: '0.8rem', fontStyle: 'italic' }}>
+                    If this solves your issue, you can close this page!
+                  </div>
+                </div>
+              )}
 
               <div className="form-group">
                 <label>Category</label>
@@ -93,18 +117,19 @@ export default function CreateTicket() {
                   placeholder="Provide detailed information about the issue — steps to reproduce, error messages, affected systems..."
                   value={form.description}
                   onChange={handleChange}
+                  onBlur={handleBlur}
                   required
                   style={{ minHeight: 140 }}
                 />
               </div>
 
               {/* AI Priority Preview */}
-              {(form.title || form.description) && (
+              {aiPriority && (
                 <div className="alert alert-info" style={{ marginBottom: 16 }}>
                   🤖 <strong>AI Priority Prediction:</strong>{' '}
                   <span className={`badge badge-${aiPriority}`}>{aiPriority}</span>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginLeft: 8 }}>
-                    Based on your description keywords
+                    Powered by Natural Language Processing ML Model
                   </span>
                 </div>
               )}

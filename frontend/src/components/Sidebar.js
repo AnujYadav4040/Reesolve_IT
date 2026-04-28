@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { motion } from 'framer-motion';
 
 const icons = {
   dashboard: '⊞',
@@ -40,26 +41,22 @@ export default function Sidebar() {
 
   return (
     <div className="sidebar">
-      <div className="sidebar-logo">
-        <h2>
-          <span className="dot" />
-          Resolve IT
-        </h2>
-        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 6 }}>
-          {user?.name} &bull; <span style={{ textTransform: 'capitalize' }}>{user?.role}</span>
-        </div>
-      </div>
 
       <nav>
-        {links.map((link) => (
-          <button
+        {links.map((link, i) => (
+          <motion.button
             key={link.path}
             className={`nav-link${location.pathname === link.path ? ' active' : ''}`}
             onClick={() => navigate(link.path)}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.05 + 0.1, duration: 0.3 }}
+            whileHover={{ x: 4, backgroundColor: 'rgba(255,255,255,0.03)' }}
+            whileTap={{ scale: 0.98 }}
           >
             <span>{link.icon}</span>
             {link.label}
-          </button>
+          </motion.button>
         ))}
       </nav>
 

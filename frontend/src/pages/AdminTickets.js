@@ -122,6 +122,8 @@ export default function AdminTickets() {
                         style={{ fontWeight: 500, cursor: 'pointer', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                         onClick={() => navigate(`/tickets/${t._id}`)}
                       >
+                        {t.sentiment === 'negative' && <span title="Highly Frustrated User" style={{marginRight: '5px'}}>😡</span>}
+                        {t.isDuplicate && <span className="badge badge-critical" style={{marginRight: '5px', fontSize: '0.65rem'}}>DUPLICATE</span>}
                         {t.title}
                       </td>
                       <td className="text-muted text-sm">{t.user?.name}<br /><span style={{ fontSize: '0.72rem' }}>{t.user?.department}</span></td>

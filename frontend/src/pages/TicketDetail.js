@@ -5,7 +5,7 @@ import Sidebar from '../components/Sidebar';
 import { getTicketById, submitFeedback } from '../api';
 import { useAuth } from '../context/AuthContext';
 
-const socket = io('http://localhost:5000');
+const socket = io('http://localhost:5001');
 
 export default function TicketDetail() {
   const { id } = useParams();
@@ -84,6 +84,18 @@ export default function TicketDetail() {
         <div className="ticket-detail-grid">
           {/* Main */}
           <div>
+            {ticket.isDuplicate && (
+              <div className="alert alert-warning mb-4">
+                <strong>⚠️ Duplicate Ticket:</strong> This issue has already been reported. 
+                {ticket.parentTicket && (
+                  <span style={{ marginLeft: 5 }}>
+                    <a href={`/tickets/${ticket.parentTicket}`} style={{ color: 'var(--primary)', textDecoration: 'underline' }}>
+                      View Master Ticket
+                    </a>
+                  </span>
+                )}
+              </div>
+            )}
             <div className="card mb-4">
               <h4 style={{ marginBottom: 12, fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Description</h4>
               <p style={{ lineHeight: 1.8 }}>{ticket.description}</p>
@@ -162,6 +174,11 @@ export default function TicketDetail() {
                   </InfoRow>
                 )}
                 <InfoRow label="Category" value={ticket.category} />
+                {ticket.estimatedResolutionTime && (
+                  <InfoRow label="Est. Fix Time">
+                    <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{ticket.estimatedResolutionTime}</span>
+                  </InfoRow>
+                )}
                 <InfoRow label="Raised By" value={ticket.user?.name} />
                 <InfoRow label="Department" value={ticket.user?.department} />
                 {ticket.technician && (

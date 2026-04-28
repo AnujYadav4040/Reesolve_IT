@@ -2,17 +2,36 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { getAdminDashboard } from '../api';
+import { io } from 'socket.io-client';
+import { useToast } from '../context/ToastContext';
+import { motion } from 'framer-motion';
 
 export default function AdminDashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { addToast } = useToast();
 
-  useEffect(() => {
+  const fetchData = () => {
     getAdminDashboard()
       .then((r) => setData(r.data))
       .catch(console.error)
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchData();
+
+    const socket = io(process.env.REACT_APP_SOCKET_URL || 'http://localhost:5001');
+
+    socket.on('new_ticket', ({ ticket, message }) => {
+      addToast(message, 'info');
+      fetchData(); // Live refresh dashboard
+    });
+
+    socket.on('ticket_updated', () => fetchData());
+
+    return () => socket.disconnect();
   }, []);
 
   if (loading) return (
@@ -25,7 +44,11 @@ export default function AdminDashboard() {
     <div className="app-layout">
       <Sidebar />
       <main className="main-content">
-        <div className="page-header">
+        <motion.div 
+          className="page-header"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
           <div>
             <div className="page-title">Admin Dashboard</div>
             <div className="page-subtitle">System overview & management</div>
@@ -34,9 +57,14 @@ export default function AdminDashboard() {
             <button className="btn btn-outline btn-sm" onClick={() => navigate('/admin/analytics')}>📊 Analytics</button>
             <button className="btn btn-primary btn-sm" onClick={() => navigate('/admin/tickets')}>All Tickets</button>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="stats-grid">
+        <motion.div 
+          className="stats-grid"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ staggerChildren: 0.1 }}
+        >
           {[
             { label: 'Total Tickets', value: s.totalTickets, color: 'blue' },
             { label: 'Open', value: s.openTickets, color: 'yellow' },
@@ -45,13 +73,19 @@ export default function AdminDashboard() {
             { label: 'Closed', value: s.closedTickets, color: 'blue' },
             { label: 'Users', value: s.totalUsers, color: 'blue' },
             { label: 'Technicians', value: s.totalTechnicians, color: 'green' },
-          ].map((item) => (
-            <div key={item.label} className={`stat-card ${item.color}`}>
+          ].map((item, index) => (
+            <motion.div 
+              key={item.label} 
+              className={`stat-card ${item.color}`}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+            >
               <div className="stat-num">{item.value ?? 0}</div>
               <div className="stat-label">{item.label}</div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
 
         <div className="grid-2">
           {/* Critical Tickets */}
@@ -100,6 +134,31 @@ export default function AdminDashboard() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid-2" style={{ marginTop: '20px' }}>
+          <div className="card">
+            <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>⚡ Quick Admin Actions</h3>
+            <div className="grid-2" style={{ gap: '10px' }}>
+              <button className="btn btn-outline" onClick={() => navigate('/admin/users')} style={{ width: '100%', justifyContent: 'center' }}>Manage Users</button>
+              <button className="btn btn-outline" onClick={() => navigate('/admin/technicians')} style={{ width: '100%', justifyContent: 'center' }}>Manage Techs</button>
+              <button className="btn btn-primary" onClick={() => navigate('/admin/analytics')} style={{ width: '100%', justifyContent: 'center', gridColumn: 'span 2' }}>Generate Reports</button>
+            </div>
+          </div>
+
+          <div className="card">
+            <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>📋 Recent System Logs</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ padding: '12px', background: 'var(--surface-hover)', borderRadius: '8px', borderLeft: '3px solid var(--primary)' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>User Creation</div>
+                <div className="text-muted" style={{ fontSize: '0.8rem', marginTop: '4px' }}>Admin generated new credentials for user: <span style={{ fontFamily: 'monospace' }}>john.doe@company.com</span>.</div>
+              </div>
+              <div style={{ padding: '12px', background: 'var(--surface-hover)', borderRadius: '8px', borderLeft: '3px solid var(--warning)' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>Failed Login Attempt</div>
+                <div className="text-muted" style={{ fontSize: '0.8rem', marginTop: '4px' }}>Multiple failed attempts for user: <span style={{ fontFamily: 'monospace' }}>admin@resolveit.com</span>. Action blocked.</div>
+              </div>
             </div>
           </div>
         </div>

@@ -32,6 +32,7 @@ app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/feedback', require('./routes/feedbackRoutes'));
 app.use('/api/activity', require('./routes/activityRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
+app.use('/api/chatbot', require('./routes/chatbotRoutes'));
 
 // Socket.io Events
 io.on('connection', (socket) => {

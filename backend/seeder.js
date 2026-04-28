@@ -43,6 +43,80 @@ const seed = async () => {
     contactNumber: '0000000000',
   });
 
+  // Create Users
+  const usersToCreate = [
+    {
+      name: 'Aman',
+      email: process.env.USER_AMAN_EMAIL,
+      password: process.env.USER_AMAN_PASSWORD,
+      department: 'HR',
+      role: 'user',
+      contactNumber: '1111111111'
+    },
+    {
+      name: 'Aditya',
+      email: process.env.USER_ADITYA_EMAIL,
+      password: process.env.USER_ADITYA_PASSWORD,
+      department: 'Finance',
+      role: 'user',
+      contactNumber: '2222222222'
+    },
+    {
+      name: 'Ajay',
+      email: process.env.USER_AJAY_EMAIL,
+      password: process.env.USER_AJAY_PASSWORD,
+      department: 'Operations',
+      role: 'user',
+      contactNumber: '3333333333'
+    }
+  ];
+  for (const userData of usersToCreate) {
+    await User.create(userData);
+  }
+
+  // Create Technicians (Each requires a User document and a Technician document)
+  const sarveshUser = await User.create({
+    name: 'Sarvesh',
+    email: process.env.TECH_SARVESH_EMAIL,
+    password: process.env.TECH_SARVESH_PASSWORD,
+    department: 'IT Support',
+    role: 'technician',
+    contactNumber: '4444444444'
+  });
+  await Technician.create({
+    user: sarveshUser._id,
+    skillSet: ['Network', 'Infrastructure'],
+    contactNumber: '4444444444'
+  });
+
+  const neerajUser = await User.create({
+    name: 'Neeraj',
+    email: process.env.TECH_NEERAJ_EMAIL,
+    password: process.env.TECH_NEERAJ_PASSWORD,
+    department: 'IT Support',
+    role: 'technician',
+    contactNumber: '5555555555'
+  });
+  await Technician.create({
+    user: neerajUser._id,
+    skillSet: ['Hardware', 'Maintenance'],
+    contactNumber: '5555555555'
+  });
+
+  const vinayakUser = await User.create({
+    name: 'Vinayak',
+    email: process.env.TECH_VINAYAK_EMAIL,
+    password: process.env.TECH_VINAYAK_PASSWORD,
+    department: 'IT Support',
+    role: 'technician',
+    contactNumber: '6666666666'
+  });
+  await Technician.create({
+    user: vinayakUser._id,
+    skillSet: ['Software', 'Applications'],
+    contactNumber: '6666666666'
+  });
+
   console.log('\n✅ Fresh seeding complete!\n');
   console.log('Secure Login Credentials Configured:');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
