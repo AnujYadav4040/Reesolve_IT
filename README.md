@@ -8,12 +8,6 @@
 
 ## 👥 Team
 
-| Name | Enrollment No. |
-|------|----------------|
-| Aman | 2303600130009 |
-| Anuj Yadav | 2303600130017 |
-| Sarvesh | 2303600130049 |
-| Neeraj Gupta | 2303600130038 |
 
 **Supervisor:** Abhishek Yadav (Assistant Professor, Dept. of IT)
 
