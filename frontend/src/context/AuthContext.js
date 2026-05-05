@@ -8,12 +8,9 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const stored = localStorage.getItem('resolveIt_user');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      setUser(parsed);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${parsed.token}`;
-    }
+    // Clear any stored session on app load - always start from login
+    localStorage.removeItem('resolveIt_user');
+    delete axios.defaults.headers.common['Authorization'];
     setLoading(false);
   }, []);
 
