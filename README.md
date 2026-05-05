@@ -8,7 +8,6 @@
 
 ## 👥 Team
 
-
 **Supervisor:** Abhishek Yadav (Assistant Professor, Dept. of IT)
 
 ---
@@ -17,13 +16,25 @@
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | React.js 18 |
-| Backend | Node.js + Express.js |
-| Database | MongoDB (Mongoose ODM) |
-| Auth | JWT (JSON Web Tokens) |
-| Real-time | Socket.io |
-| Charts | Chart.js + react-chartjs-2 |
-| AI Feature | Keyword-based priority predictor |
+| **Frontend** | React.js 18, Framer Motion (Animations) |
+| **Backend** | Node.js + Express.js |
+| **Database** | MongoDB (Mongoose ODM) |
+| **Auth** | JWT (JSON Web Tokens) |
+| **Real-time** | Socket.io |
+| **UI Design** | Vanilla CSS (Glassmorphism, Dark Theme, Light Mode Toggle) |
+| **Charts** | Chart.js + react-chartjs-2 |
+| **AI/ML Engine** | `natural` (NLP library), Keyword-based AI predictor |
+
+---
+
+## ✨ Key Features & Enhancements
+
+1. **AI Chatbot & Smart FAQ**: Provides users with instant resolution suggestions and troubleshooting steps before they submit a ticket.
+2. **Sentiment Analysis**: Evaluates the user's input to automatically adjust ticket priority based on frustration or urgency levels.
+3. **Advanced ML Categorization**: Auto-categorizes tickets and assigns them to the most suitable technician based on skill sets.
+4. **Real-time Updates**: Powered by Socket.io, users and technicians see live status changes, new ticket alerts, and instant dashboard syncs.
+5. **Modern UI Aesthetics**: Premium, dark-themed glassmorphic design featuring seamless transitions and Framer Motion micro-animations. Includes an automatic light mode toggle for text colors.
+6. **Role-Based Architecture**: Distinct interfaces and permissions for Users, Technicians, and Admins.
 
 ---
 
@@ -50,10 +61,10 @@ resolve-it/
 │   ├── middleware/
 │   │   └── authMiddleware.js  # JWT protect + role-based authorize
 │   ├── controllers/
-│   │   └── aiPriorityController.js  # AI keyword scoring engine
+│   │   └── aiPriorityController.js  # AI NLP/Keyword scoring engine
 │   ├── server.js             # Express app + Socket.io setup
 │   ├── seeder.js             # Demo data seeder
-│   ├── .env.example
+│   ├── .env                  # Environment Variables + Pre-configured Users
 │   └── package.json
 │
 └── frontend/
@@ -65,10 +76,10 @@ resolve-it/
         ├── components/
         │   └── Sidebar.js        # Role-aware navigation sidebar
         ├── pages/
-        │   ├── LoginPage.js
+        │   ├── LoginPage.js      # Premium Glassmorphic Login
         │   ├── RegisterPage.js
         │   ├── UserDashboard.js
-        │   ├── CreateTicket.js   # With live AI priority preview
+        │   ├── CreateTicket.js   # With live AI priority preview & Chatbot
         │   ├── MyTickets.js      # Filtered ticket list + pagination
         │   ├── TicketDetail.js   # Real-time updates via Socket.io
         │   ├── TechnicianDashboard.js
@@ -78,7 +89,7 @@ resolve-it/
         │   └── AdminTechnicians.js
         ├── api.js               # Axios API helper (all endpoints)
         ├── App.js               # React Router with role-based guards
-        ├── index.css            # Full design system (dark theme)
+        ├── index.css            # Full design system (dark/light theme)
         └── index.js
 ```
 
@@ -109,21 +120,16 @@ cd backend
 # Install dependencies
 npm install
 
-# Create environment file
+# Create environment file (if missing, refer to .env section below)
 cp .env.example .env
 ```
 
-Edit `.env`:
+**Ensure your `.env` contains the default port and credentials:**
 ```env
-PORT=5000
+PORT=5001
 MONGO_URI=mongodb://localhost:27017/resolve_it
-JWT_SECRET=your_super_secret_key_change_this
+JWT_SECRET=your_super_secret_key
 NODE_ENV=development
-```
-
-**Seed demo data (optional but recommended):**
-```bash
-node seeder.js
 ```
 
 **Start the backend server:**
@@ -135,7 +141,7 @@ npm run dev
 npm start
 ```
 
-Server runs at: `http://localhost:5000`
+Server runs at: `http://localhost:5001`
 
 ---
 
@@ -157,69 +163,32 @@ App opens at: `http://localhost:3000`
 
 ## 🔑 Demo Login Credentials
 
-After running `node seeder.js`:
+The system includes pre-configured accounts in the `.env` file:
 
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | admin@resolveit.com | admin123 |
-| Technician | rahul@resolveit.com | tech123 |
-| Technician | priya@resolveit.com | tech123 |
-| User | aman@resolveit.com | user123 |
-| User | anuj@resolveit.com | user123 |
-
----
-
-## 🔌 API Endpoints Reference
-
-### Auth
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/register` | Register new user |
-| POST | `/api/auth/login` | Login + get JWT |
-| GET | `/api/auth/me` | Get current user |
-
-### Tickets
-| Method | Endpoint | Access |
-|--------|----------|--------|
-| POST | `/api/tickets` | User |
-| GET | `/api/tickets` | All (role-filtered) |
-| GET | `/api/tickets/:id` | All |
-| PUT | `/api/tickets/:id/status` | Technician, Admin |
-| PUT | `/api/tickets/:id/assign` | Admin |
-| PUT | `/api/tickets/:id/priority` | Admin |
-
-### Admin
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/admin/dashboard` | Summary stats |
-| POST | `/api/admin/auto-assign/:ticketId` | Auto-assign to best technician |
-
-### Analytics
-| Method | Endpoint |
-|--------|----------|
-| GET | `/api/analytics/tickets-by-status` |
-| GET | `/api/analytics/tickets-by-category` |
-| GET | `/api/analytics/tickets-by-priority` |
-| GET | `/api/analytics/tickets-trend` |
-| GET | `/api/analytics/technician-performance` |
-| GET | `/api/analytics/avg-rating` |
+| Role | Name | Email | Password |
+|------|------|-------|----------|
+| **Admin** | Admin | `admin@resolveit.com` | `ResolveIt12@` |
+| **Technician** | Sarvesh | `sarvesh@resolveit.com` | `Sarvesh123!` |
+| **Technician** | Neeraj | `neeraj@resolveit.com` | `Neeraj123!` |
+| **Technician** | Vinayak | `vinayak@resolveit.com` | `Vinayak123!` |
+| **User** | Aman | `aman@resolveit.com` | `Aman123!` |
+| **User** | Aditya | `aditya@resolveit.com` | `Aditya123!` |
+| **User** | Ajay | `ajay@resolveit.com` | `Ajay123!` |
 
 ---
 
-## 🤖 AI Priority Prediction
+## 🤖 Smart AI Engine
 
-The system uses a **keyword scoring engine** (`aiPriorityController.js`) that analyzes ticket title + description and assigns scores:
+The system uses an advanced backend logic incorporating **NLP and Sentiment Analysis** via the `natural` library (`aiPriorityController.js`) to score tickets.
 
-| Priority | Weight | Example Keywords |
-|----------|--------|-----------------|
-| Critical | +3 | server down, data loss, breach, emergency |
-| High | +2 | not working, broken, error, urgent |
-| Medium | +1 | slow, issue, configure, setup |
-| Low | +1 | question, inquiry, minor, how to |
+### Evaluation Criteria:
+1. **Keyword Analysis**: Checks for critical vs. minor terms (e.g., "server down" vs. "how to").
+2. **Sentiment Weighting**: Frustrated or urgent language inherently scales up the ticket priority automatically.
+3. **Smart Categorization**: ML logic routes the ticket context to the most capable technician available.
 
-The highest-scoring category becomes the predicted priority. This runs both:
-- **Backend:** When ticket is created (stored as `aiPredictedPriority`)
-- **Frontend:** Live preview while user types the ticket description
+**Execution:**
+- **Backend:** When a ticket is created, the NLP model generates `aiPredictedPriority`.
+- **Frontend:** Instant feedback is given via the **Smart FAQ / Chatbot** while the user types, suggesting fixes before the ticket is finalized.
 
 ---
 
@@ -245,36 +214,12 @@ The highest-scoring category becomes the predicted priority. This runs both:
 
 ---
 
-## 🧩 Modules Summary
-
-### User Module
-- Register / Login
-- Create tickets with live AI priority preview
-- Track ticket status in real time
-- View activity timeline
-- Submit feedback after resolution
-
-### Technician Module
-- View all assigned tickets
-- Update status: In Progress → Resolved / On Hold
-- Toggle availability status (Available / Busy / Offline)
-- Enter resolution notes
-
-### Admin Module
-- System-wide dashboard with statistics
-- Assign tickets manually or auto-assign (smart allocation)
-- Override ticket priority
-- View analytics (charts)
-- Manage technician roster
-
----
-
 ## 🛡️ Security
 
-- Passwords hashed with **bcryptjs** (salt rounds: 10)
-- **JWT** tokens with 7-day expiry
-- Role-based route protection (`protect` + `authorize` middleware)
-- CORS restricted to frontend origin
+- Passwords hashed with **bcryptjs** (salt rounds: 10).
+- **JWT** tokens with 7-day expiry.
+- Role-based route protection (`protect` + `authorize` middleware).
+- CORS restricted to frontend origin.
 
 ---
 
@@ -287,6 +232,7 @@ The highest-scoring category becomes the predicted priority. This runs both:
 "jsonwebtoken": "^9.0.0",
 "bcryptjs": "^2.4.3",
 "socket.io": "^4.6.1",
+"natural": "^8.1.1",
 "dotenv": "^16.0.3"
 ```
 
@@ -295,6 +241,7 @@ The highest-scoring category becomes the predicted priority. This runs both:
 "react": "^18.2.0",
 "react-router-dom": "^6.11.2",
 "axios": "^1.4.0",
+"framer-motion": "^12.38.0",
 "socket.io-client": "^4.6.1",
 "chart.js": "^4.3.0",
 "react-chartjs-2": "^5.2.0"
@@ -304,10 +251,8 @@ The highest-scoring category becomes the predicted priority. This runs both:
 
 ## 🚀 Future Enhancements
 
-1. **Email Notifications** — Nodemailer integration for ticket updates
-2. **File Attachments** — Multer + Cloudinary for screenshot uploads  
-3. **Mobile App** — React Native companion app
-4. **SLA Management** — Auto-escalation based on response time
-5. **ML Priority Model** — Replace keyword engine with trained NLP model
-6. **Two-Factor Auth** — OTP-based login security
-7. **Dark/Light Theme Toggle** — User preference persistence
+1. **Email Notifications** — Nodemailer integration for ticket updates.
+2. **File Attachments** — Multer + Cloudinary for screenshot uploads.
+3. **Mobile App** — React Native companion app.
+4. **SLA Management** — Auto-escalation based on response time.
+5. **Two-Factor Auth** — OTP-based login security.
